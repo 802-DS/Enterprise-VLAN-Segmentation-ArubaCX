@@ -14,8 +14,8 @@ A small company is expanding into a larger office space and growing its headcoun
 
 **Goal:** Redesign the LAN using VLAN segmentation so that HR, Sales, and Guest traffic are logically separated, security policies can be applied per department, and the network is easier to manage as the company grows. See Section 5 for the full topology diagram.
 
-### Logical Topology Diagram
-![Network Topology Diagram](images/vlan1.drawio.svg)
+![As-Is Network Architecture](images/as-is-flat-network.svg)
+*Figure 1: As-Is Architecture — single flat broadcast domain (VLAN 1), no traffic separation between HR, Sales, and Guest devices.*
 
 ---
 
@@ -114,6 +114,9 @@ By completing this project, you will be able to:
 ---
 
 ## 6. Design Decisions
+
+![To-Be High-Level Design](images/to-be-vlan-segmentation.svg)
+*Figure 2: To-Be HLD — proposed VLAN-segmented architecture with the IP addressing plan (VLANs 10/20/30/99) applied across the Aruba core and Cisco access layer.*
 
 | Decision | Rationale |
 | :--- | :--- |
