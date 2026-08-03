@@ -1,6 +1,4 @@
-# Enterprise-VLAN-Segmentation-ArubaCX
-Multi-VLAN enterprise network architecture and segmentation deployment built around a dual-vendor setup, using an ArubaOS-CX Layer 3 switch and a Cisco Layer 2 switch.
-
+# Enterprise VLAN Segmentation Project
 ### Securing and Organizing Network Traffic for a Growing Office
 
 ---
@@ -14,7 +12,7 @@ A small company is expanding into a larger office space and growing its headcoun
 - **Poor scalability:** As the office grows, a single flat /24 (or larger) network becomes harder to manage, troubleshoot, and secure.
 - **No policy enforcement:** There's no way to restrict Sales from accessing HR file shares, or to stop Guest devices from reaching internal resources at all.
 
-**Goal:** Redesign the LAN using VLAN segmentation so that HR, Sales, and Guest traffic are logically separated, security policies can be applied per department, and the network is easier to manage as the company grows.
+**Goal:** Redesign the LAN using VLAN segmentation so that HR, Sales, and Guest traffic are logically separated, security policies can be applied per department, and the network is easier to manage as the company grows. See Section 5 for the full topology diagram.
 
 ### Logical Topology Diagram
 ![Network Topology Diagram](images/vlan1.drawio.svg)
@@ -69,6 +67,8 @@ By completing this project, you will be able to:
 
 ## 5. Topology
 
+### 5.1 Logical Network Diagram
+
 ```text
                                   ┌───────────────┐
                                   │      ISP      │
@@ -100,8 +100,9 @@ By completing this project, you will be able to:
                                           ┌──┴───┐
                                           │Sales2│
                                           └──────┘
+```
 
-## 5. IP Addressing Plan
+### 5.2 IP Addressing Plan
 
 | VLAN ID | Name | Subnet | Gateway (SVI) | DHCP Range |
 | :--- | :--- | :--- | :--- | :--- |
@@ -128,139 +129,62 @@ By completing this project, you will be able to:
 
 ## 7. Configuration
 
-> **Note:** Core switch syntax is ArubaOS-CX. Access switch syntax is Cisco IOS-style.
+> **Note:** Core switch syntax is ArubaOS-CX. Access switch syntax is Cisco IOS-style. Only the commands that establish or change something meaningful are shown below — repetitive per-VLAN/per-port lines are represented once, with a note to repeat the pattern.
 
-### 7.1 Core Switch (ArubaCX L3) — VLAN Creation
+### 7.1 Core Switch (ArubaCX) — VLANs and SVIs
 
 ```text
-ArubaCX-Core-L3# configure
 ArubaCX-Core-L3(config)# vlan 10
 ArubaCX-Core-L3(config-vlan-10)# name HR
-ArubaCX-Core-L3(config-vlan-10)# exit
-ArubaCX-Core-L3(config)# vlan 20
-ArubaCX-Core-L3(config-vlan-20)# name SALES
-ArubaCX-Core-L3(config-vlan-20)# exit
-ArubaCX-Core-L3(config)# vlan 30
-ArubaCX-Core-L3(config-vlan-30)# name GUEST
-ArubaCX-Core-L3(config-vlan-30)# exit
-ArubaCX-Core-L3(config)# vlan 99
-ArubaCX-Core-L3(config-vlan-99)# name MGMT
-ArubaCX-Core-L3(config-vlan-99)# exit
-ArubaCX-Core-L3(config)# vlan 999
-ArubaCX-Core-L3(config-vlan-999)# name NATIVE_UNUSED
-ArubaCX-Core-L3(config-vlan-999)# exit
-```
+! Repeat the vlan/name pattern for 20 (SALES), 30 (GUEST), 99 (MGMT), 999 (NATIVE_UNUSED)
 
-### 7.2 Core Switch (ArubaCX L3) — Enable Routing + SVIs
-
-```text
 ArubaCX-Core-L3(config)# interface vlan 10
-ArubaCX-Core-L3(config-if-vlan)# description HR Gateway
 ArubaCX-Core-L3(config-if-vlan)# ip address 192.168.10.1/24
 ArubaCX-Core-L3(config-if-vlan)# no shutdown
-ArubaCX-Core-L3(config-if-vlan)# exit
-
-ArubaCX-Core-L3(config)# interface vlan 20
-ArubaCX-Core-L3(config-if-vlan)# description SALES Gateway
-ArubaCX-Core-L3(config-if-vlan)# ip address 192.168.20.1/24
-ArubaCX-Core-L3(config-if-vlan)# no shutdown
-ArubaCX-Core-L3(config-if-vlan)# exit
-
-ArubaCX-Core-L3(config)# interface vlan 30
-ArubaCX-Core-L3(config-if-vlan)# description GUEST Gateway
-ArubaCX-Core-L3(config-if-vlan)# ip address 192.168.30.1/24
-ArubaCX-Core-L3(config-if-vlan)# no shutdown
-ArubaCX-Core-L3(config-if-vlan)# exit
-
-ArubaCX-Core-L3(config)# interface vlan 99
-ArubaCX-Core-L3(config-if-vlan)# description MGMT Gateway
-ArubaCX-Core-L3(config-if-vlan)# ip address 192.168.99.1/24
-ArubaCX-Core-L3(config-if-vlan)# no shutdown
-ArubaCX-Core-L3(config-if-vlan)# exit
+! Repeat per VLAN using the gateway IPs from the addressing table in Section 5.2
 ```
 
-### 7.3 Core Switch (ArubaCX L3) — Trunk Toward Access Switch
+### 7.2 Core Switch (ArubaCX) — Trunk to Access Switch
 
 ```text
 ArubaCX-Core-L3(config)# interface 1/1/2
-ArubaCX-Core-L3(config-if)# description Trunk-to-ACCESS-SW
 ArubaCX-Core-L3(config-if)# no routing
 ArubaCX-Core-L3(config-if)# vlan trunk native 999
 ArubaCX-Core-L3(config-if)# vlan trunk allowed 10,20,30,99
-ArubaCX-Core-L3(config-if)# no shutdown
-ArubaCX-Core-L3(config-if)# exit
 ```
 
-### 7.4 Access Switch (Cisco L2) — Trunk Toward Core
+### 7.3 Access Switch (Cisco) — Trunk to Core
 
 ```text
-ACCESS-SW(config)# interface gigabitEthernet 0/0
-ACCESS-SW(config-if)# description Trunk-to-CORE-SW
 ACCESS-SW(config-if)# switchport trunk encapsulation dot1q
 ACCESS-SW(config-if)# switchport mode trunk
 ACCESS-SW(config-if)# switchport trunk native vlan 999
 ACCESS-SW(config-if)# switchport trunk allowed vlan 10,20,30,99
-ACCESS-SW(config-if)# no shutdown
 ```
 
-### 7.5 Access Switch (Cisco L2) — Access Ports per Department
+*Native VLAN and allowed VLAN list must match exactly on both ends of the trunk (Section 9 covers what happens when they don't).*
+
+### 7.4 Access Switch (Cisco) — Access Ports
 
 ```text
-! HR access ports
-ACCESS-SW(config)# interface range gigabitEthernet 0/1 - 2
-ACCESS-SW(config-if-range)# switchport mode access
-ACCESS-SW(config-if-range)# switchport access vlan 10
-ACCESS-SW(config-if-range)# spanning-tree portfast
-ACCESS-SW(config-if-range)# exit
-
-! Sales access ports
-ACCESS-SW(config)# interface gigabitEthernet 0/3
 ACCESS-SW(config-if)# switchport mode access
-ACCESS-SW(config-if)# switchport access vlan 20
+ACCESS-SW(config-if)# switchport access vlan 10
 ACCESS-SW(config-if)# spanning-tree portfast
-ACCESS-SW(config-if)# exit
-
-ACCESS-SW(config)# interface gigabitEthernet 1/0
-ACCESS-SW(config-if)# switchport mode access
-ACCESS-SW(config-if)# switchport access vlan 20
-ACCESS-SW(config-if)# spanning-tree portfast
-ACCESS-SW(config-if)# exit
-
-! Guest AP uplink port
-ACCESS-SW(config)# interface gigabitEthernet 1/1
-ACCESS-SW(config-if)# switchport mode access
-ACCESS-SW(config-if)# switchport access vlan 30
-ACCESS-SW(config-if)# spanning-tree portfast
-ACCESS-SW(config-if)# exit
+! Same pattern per port, just swap the VLAN ID: 20 for Sales ports, 30 for the Guest AP port
 ```
 
-### 7.6 Core Switch (ArubaCX L3) — DHCP Pools
+### 7.5 Core Switch (ArubaCX) — DHCP Pool
 
 ```text
-ArubaCX-Core-L3(config)# dhcp-server
 ArubaCX-Core-L3(config-dhcp-server)# pool HR_POOL
 ArubaCX-Core-L3(config-dhcp-server-pool)# range 192.168.10.100 192.168.10.200 netmask 255.255.255.0
 ArubaCX-Core-L3(config-dhcp-server-pool)# default-router 192.168.10.1
 ArubaCX-Core-L3(config-dhcp-server-pool)# dns-server 8.8.8.8
-ArubaCX-Core-L3(config-dhcp-server-pool)# exit
-
-ArubaCX-Core-L3(config-dhcp-server)# pool SALES_POOL
-ArubaCX-Core-L3(config-dhcp-server-pool)# range 192.168.20.100 192.168.20.200 netmask 255.255.255.0
-ArubaCX-Core-L3(config-dhcp-server-pool)# default-router 192.168.20.1
-ArubaCX-Core-L3(config-dhcp-server-pool)# dns-server 8.8.8.8
-ArubaCX-Core-L3(config-dhcp-server-pool)# exit
-
-ArubaCX-Core-L3(config-dhcp-server)# pool GUEST_POOL
-ArubaCX-Core-L3(config-dhcp-server-pool)# range 192.168.30.100 192.168.30.200 netmask 255.255.255.0
-ArubaCX-Core-L3(config-dhcp-server-pool)# default-router 192.168.30.1
-ArubaCX-Core-L3(config-dhcp-server-pool)# dns-server 8.8.8.8
-ArubaCX-Core-L3(config-dhcp-server-pool)# exit
-
+! Repeat for SALES_POOL and GUEST_POOL using their own subnet/gateway; no pool needed for Management (static only)
 ArubaCX-Core-L3(config-dhcp-server)# enable
-ArubaCX-Core-L3(config-dhcp-server)# exit
 ```
 
-### 7.7 Core Switch (ArubaCX L3) — Guest Isolation ACL
+### 7.6 Core Switch (ArubaCX) — Guest Isolation ACL
 
 ```text
 ArubaCX-Core-L3(config)# access-list ip GUEST_RESTRICT
@@ -268,14 +192,12 @@ ArubaCX-Core-L3(config-acl-ip)# 10 deny ip 192.168.30.0/24 192.168.10.0/24
 ArubaCX-Core-L3(config-acl-ip)# 20 deny ip 192.168.30.0/24 192.168.20.0/24
 ArubaCX-Core-L3(config-acl-ip)# 30 deny ip 192.168.30.0/24 192.168.99.0/24
 ArubaCX-Core-L3(config-acl-ip)# 40 permit ip any any
-ArubaCX-Core-L3(config-acl-ip)# exit
 
 ArubaCX-Core-L3(config)# interface vlan 30
 ArubaCX-Core-L3(config-if-vlan)# apply access-list ip GUEST_RESTRICT in
-ArubaCX-Core-L3(config-if-vlan)# exit
 ```
 
-*This permits Guest → Internet while explicitly blocking Guest → HR, Sales, and Management subnets.*
+*Permits Guest → Internet while explicitly blocking Guest → HR, Sales, and Management subnets. The `permit any any` line is required, or Guest devices lose Internet access too.*
 
 ---
 
@@ -288,7 +210,6 @@ ArubaCX-Core-L3(config-if-vlan)# exit
 | **Confirm SVIs are up** | `show interface brief` | Vlan10, Vlan20, Vlan30, Vlan99 show up/up with correct IPs. |
 | **Confirm routing table has all VLAN subnets** | `show ip route` | Connected routes listed for each VLAN subnet. |
 | **Confirm HR device gets correct IP** | `ipconfig` (on HR PC) | Address in 192.168.10.100–.200 range, gateway 192.168.10.1. |
-| **Confirm HR ↔ Sales connectivity** | `ping 192.168.20.x` from HR PC | Replies received (if policy allows it) or blocked per ACL, as designed. |
 | **Confirm Guest is blocked from HR/Sales** | `ping 192.168.10.1` from a Guest device | Request times out / unreachable. |
 | **Confirm Guest can still reach Internet** | `ping 8.8.8.8` from a Guest device | Replies received. |
 | **Confirm ACL is being hit** | `show access-list GUEST_RESTRICT` | Match counters increment on the deny lines when a Guest device tries to reach HR/Sales. |
@@ -312,10 +233,24 @@ ArubaCX-Core-L3(config-if-vlan)# exit
 
 ---
 
-## 10. Possible Extensions (Optional Stretch Goals)
+## 10. Engineering Notes
 
-- Add a **Voice VLAN** for IP phones alongside data VLANs on the same access ports.
-- Implement **802.1X** port-based authentication so devices are dynamically assigned to VLANs based on identity.
-- Add **Private VLANs (PVLANs)** within the Guest VLAN so guest devices can't see each other either.
-- Introduce redundant core switches with **VSX** for gateway high availability.
-- Migrate DHCP to a centralized server with `ip helper-address` relay for enterprise scale.
+- Kept VLAN numbering **identical on both the Aruba core and Cisco access switch** (10/20/30/99) — mismatched IDs across vendors are a common source of "invisible" outages that only show up in packet captures.
+- Reserved **VLAN 99 for management** and kept it off the user-facing trunk logic entirely, so a misconfigured ACL or DHCP scope on a user VLAN can never accidentally expose switch management.
+- Moved the **native VLAN to an unused ID (999)** instead of leaving it as VLAN 1, closing off a well-known VLAN-hopping vector for close to zero extra effort.
+- Enabled **`spanning-tree portfast`** only on access ports connecting to end hosts (PCs, AP) — never on the trunk — so devices come up fast without triggering unnecessary topology change notifications.
+- Applied the Guest-isolation ACL **on the SVI, not the trunk port**, so the policy follows the VLAN regardless of which physical port or switch a guest device lands on.
+- Left **VLAN ranges 40–98 and 100+ unused on purpose** — an intentional gap for future departments (Finance, IoT, additional guest tiers) without renumbering anything already deployed.
+- Chose a **Layer 3 core + Layer 2 access split** rather than routing on the access switch, so all policy (ACLs, DHCP, inter-VLAN routing) lives in one place and the access layer stays simple to swap or scale out.
+
+---
+
+## 11. Lessons Learned
+
+Building this as a lab/documentation exercise surfaced a few things that would need more attention in a real production rollout:
+
+- **Cross-vendor consistency is the biggest risk, not the biggest complexity.** The Aruba and Cisco CLIs differ in syntax, but the actual failure mode in practice is a human one — someone updates the allowed-VLAN list on one switch and forgets the other. In production this would be handled with a **single source of truth** (e.g., a network automation tool like Ansible/NetBox) pushing config to both platforms instead of manual parallel changes.
+- **A single core switch is a single point of failure.** This design is fine for a small office, but at production scale I'd introduce a **redundant core pair** (Aruba VSX or similar) so a core switch failure doesn't take down every VLAN's gateway and DHCP service at once.
+- **On-switch DHCP doesn't scale well.** Running DHCP directly on the core switch is convenient for a small office, but a production environment would benefit from a **centralized DHCP server** with `ip helper-address`-style relay, giving centralized logging, failover, and reservation management that switch-based DHCP doesn't offer.
+- **ACLs alone are a coarse tool.** The Guest-isolation ACL works, but it's static and subnet-based. In production I'd look at **dynamic segmentation (e.g., 802.1X + RADIUS-assigned VLANs, or role-based policies)** so device identity — not just IP subnet — drives access decisions.
+- **Documentation drift is a real risk.** Writing this project doc alongside the config was useful, but in production the diagram, addressing plan, and ACLs need to live somewhere that's automatically kept in sync with the running config (e.g., generated from the network source of truth) rather than maintained by hand.
