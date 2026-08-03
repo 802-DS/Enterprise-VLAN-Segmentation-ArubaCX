@@ -17,7 +17,7 @@ A small company is expanding into a larger office space and growing its headcoun
 **Goal:** Redesign the LAN using VLAN segmentation so that HR, Sales, and Guest traffic are logically separated, security policies can be applied per department, and the network is easier to manage as the company grows.
 
 ### Logical Topology Diagram
-![Network Topology Diagram](images/topology.draw.io.png)
+![Network Topology Diagram](images/vlan1.drawio.svg)
 
 ---
 
